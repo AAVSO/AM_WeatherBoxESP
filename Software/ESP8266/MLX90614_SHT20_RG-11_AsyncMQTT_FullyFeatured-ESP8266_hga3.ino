@@ -30,7 +30,7 @@ DFRobot_SHT20    sht20;
 #define WIFI_PASSWORD "YYYYYYY"
 
 // Raspberri Pi Mosquitto MQTT Broker
-#define MQTT_HOST IPAddress (10, 0, 0, 199) //(192, 168, 1, XXX)
+#define MQTT_HOST IPAddress (aaa, bbb, c, ddd ) //e.g. (192, 168, 1, XXX), depending on your local network
 // For a cloud MQTT broker, type the domain name
 //#define MQTT_HOST "example.com"
 #define MQTT_PORT 1883

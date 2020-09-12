@@ -26,8 +26,8 @@ DFRobot_SHT20    sht20;
 #include <AsyncMqttClient.h>
 
 // WiFi credentials for local WiFi network
-#define WIFI_SSID "JY4W5"
-#define WIFI_PASSWORD "MilchFlasche"
+#define WIFI_SSID "XXXXXXX"
+#define WIFI_PASSWORD "YYYYYYY"
 
 // Raspberri Pi Mosquitto MQTT Broker
 #define MQTT_HOST IPAddress (10, 0, 0, 199) //(192, 168, 1, XXX)

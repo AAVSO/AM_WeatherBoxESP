@@ -19,7 +19,7 @@ String InterfaceVersion=   "1"; // alpaca v1
 
 #include <ASCOMAPICommon_rest.h>
 
-#define INSTANCE_NUMBER 1
+#define DEVICE_NUMBER 0
 
 void handleAPIversions(void)
 {
@@ -56,7 +56,7 @@ void handleAPIconfiguredDevices(void)
     JsonObject& device= jsonBuff2.createObject();
     device["DeviceName"]= Description;
     device["DeviceType"]= DriverName;
-    device["DeviceNumber"]= INSTANCE_NUMBER;
+    device["DeviceNumber"]= DEVICE_NUMBER;
     device["UniqueID"]= GUID;    
 
     values.add(device);    
@@ -80,7 +80,7 @@ void alpaca_setup() {
    String preUri = "/api/v"+ InterfaceVersion+ "/";
    preUri += DriverName;
    preUri += "/";
-   preUri += INSTANCE_NUMBER;
+   preUri += DEVICE_NUMBER;
    preUri += "/";
    server.on(preUri+"action",              HTTP_PUT, handleAction );
    server.on(preUri+"commandblind",        HTTP_PUT, handleCommandBlind );

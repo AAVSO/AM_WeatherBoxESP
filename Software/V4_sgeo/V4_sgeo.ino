@@ -1,4 +1,5 @@
 /*
+  Board:   NodeMCU 0.9 (ESP-12 Module)
   Start with MLX90614_SHT20_RG-11_PangolinMQTT_ESP8266_hga4
   HGAdler == AMH
   version 4, 2020-09-12
@@ -29,6 +30,8 @@
    #include <ESP8266WebServer.h>
    ESP8266WebServer server(80);
 #endif
+
+// name at the router ESP-1E2B43-router.home, unless we do mDNS
 
 #include <WiFiManager.h>
 const String DEVICE_SSID = "AutoConnectAP";

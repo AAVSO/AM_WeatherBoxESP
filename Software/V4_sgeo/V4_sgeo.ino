@@ -26,8 +26,8 @@
    #include <Arduino.h>
    #include <ESP8266WiFi.h>
    #include <Hash.h>
-   #include <ESPAsyncTCP.h>
-   #include <ESP8266WebServer.h>
+   //#include <ESPAsyncTCP.h>
+   #include <ESP8266WebServer.h>  //https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
    ESP8266WebServer server(80);
 #endif
 
@@ -40,7 +40,7 @@ const String DEVICE_SSID = "AutoConnectAP";
   
 #include "sensors.h" // everything related to the weather sensors
 //#include "mqtt.h"   // everything related to MQTT
-#include "alpaca.h"
+#include "alpaca.h"  
 
 
 

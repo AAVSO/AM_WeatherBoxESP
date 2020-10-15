@@ -10,36 +10,45 @@
 
 
 bool connected;
-String DriverName=         "observingconditions"; // ASCOM name
-String DriverVersion=      DRIVER_VERSION;
-String DriverInfo=         "V4_sgeo";
-String Description=        "AAVSO AM_WeatherBox2, ESP8266, NodeMCU 0.9(ESP-12 Module)" ;
-String InterfaceVersion=   "1"; // alpaca v1
-#define GUID    "fa7b12dc-dff9-407c-a7f5-3b5e73b77c04"
+const String DeviceDescription= "the rain in spain";
+const String DriverName=         "observingconditions"; // ASCOM name
+const String DriverVersion=      DRIVER_VERSION;
+const String DriverInfo=         "V4_sgeo";
+const String Description=        "AAVSO AM_WeatherBox2, ESP8266, NodeMCU 0.9(ESP-12 Module)" ;
+const String InterfaceVersion= "1";   // alpaca v1
+const String DiscoveryPacket= "alpacadiscovery1"; // ends with the interface version
+const String GUID=    "fa7b12dc-dff9-407c-a7f5-3b5e73b77c04";
+#define INSTANCE_NUMBER 0
+
+const String SERVERNAME= "abc";
+const String MFG= "AAVSO AM project";
+const String MFG_VERSION= DRIVER_VERSION;
+const String LOCATION= "unknown";
 
 #include <ASCOMAPICommon_rest.h>  // https://github.com/gasilvis/ESP_Alpaca_common
 
-#define DEVICE_NUMBER 0
 
 
 
 void alpaca_setup() {
+   
    // management api
    server.on("/management/apiversions", handleAPIversions);
    server.on("/management/v1/configureddevices", handleAPIconfiguredDevices);
-
+   server.on("/management/v1/description", handleAPIdescription);
+   
    //Common ASCOM handlers
    String preUri = "/api/v"+ InterfaceVersion+ "/";
    preUri += DriverName;
    preUri += "/";
-   preUri += DEVICE_NUMBER;
+   preUri += INSTANCE_NUMBER;
    preUri += "/";
    server.on(preUri+"action",              HTTP_PUT, handleAction );
    server.on(preUri+"commandblind",        HTTP_PUT, handleCommandBlind );
    server.on(preUri+"commandbool",         HTTP_PUT, handleCommandBool );
    server.on(preUri+"commandstring",       HTTP_PUT, handleCommandString );
    server.on(preUri+"connected",           handleConnected );
-   server.on(preUri+"description",         HTTP_GET, handleDescriptionGet );     //
+   server.on(preUri+"description",         HTTP_GET, handleDescriptionGet );     
    server.on(preUri+"driverinfo",          HTTP_GET, handleDriverInfoGet );
    server.on(preUri+"driverversion",       HTTP_GET, handleDriverVersionGet );
    server.on(preUri+"interfaceversion",    HTTP_GET, handleInterfaceVersionGet );
@@ -47,6 +56,39 @@ void alpaca_setup() {
    server.on(preUri+"supportedactions",    HTTP_GET, handleSupportedActionsGet );
 }
 
+void handleDiscovery( int udpBytesCount ) {
+    char inBytes[64];
+    String message;
+ 
+    Serial.printf("UDP: %i bytes received from %s:%i\n", udpBytesCount, Udp.remoteIP().toString().c_str(), Udp.remotePort() );
+
+    // We've received a packet, read the data from it
+    Udp.read( inBytes, udpBytesCount); // read the packet into the buffer
+    //Is it for us ?
+    char protocol[16];
+    strncpy( protocol, (char*) inBytes, 16);
+    Serial.println(protocol);
+    if ( strncasecmp( DiscoveryPacket.c_str(), protocol, 16 ) == 0 )
+    {
+      DynamicJsonBuffer jsonBuffer(256);
+      JsonObject& root = jsonBuffer.createObject();
+      Serial.println("responding");
+      Udp.beginPacket( Udp.remoteIP(), Udp.remotePort() );
+      //Respond with discovery message
+      root["AlpacaPort"] = ALPACA_PORT;
+      String LocalIP = String() + WiFi.localIP()[0] + "." + WiFi.localIP()[1] + "." + 
+                                  WiFi.localIP()[2] + "." + WiFi.localIP()[3];
+      root["IPAddress"] = LocalIP.c_str();
+      root["Type"] = DriverName;
+      root["Name"] = WiFi.hostname();
+      root["UniqueID"] = system_get_chip_id();
+      root.printTo( message );
+      Udp.write( message.c_str(), strlen(message.c_str()) * sizeof(char) );
+      Udp.endPacket();   
+      Serial.println(message.c_str());
+    }
+ }
+ 
 
 
 

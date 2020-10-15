@@ -10,7 +10,6 @@
   external libraries need to be downloaded and manually installed as zip files via Arduino IDE library manager:
   https://github.com/me-no-dev/ESPAsyncTCP
   https://github.com/DFRobot/DFRobot_SHT20
-  [https://github.com/marvinroger/async-mqtt-client] -> replaced by
   https://github.com/philbowles/PangolinMQTT
 
   all other libraries need to be installed directly via Arduino IDE library manager
@@ -18,17 +17,25 @@
 */
 
 #define DRIVER_VERSION  "0.4.1"
+
+#define ALPACA_PORT   80
+#define ALPACA_DISCOVERY_PORT  32227
+
 // Import required libraries
-#ifdef ESP32
+#ifdef ESP32  // not tested
    #include <WiFi.h>
    #include <ESPAsyncWebServer.h>
 #else
    #include <Arduino.h>
-   #include <ESP8266WiFi.h>
-   #include <Hash.h>
+   #include <ESP8266WiFi.h> // https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WiFi
+   //#include <Hash.h>
    //#include <ESPAsyncTCP.h>
    #include <ESP8266WebServer.h>  //https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
-   ESP8266WebServer server(80);
+   ESP8266WebServer server(ALPACA_PORT);
+   #include <WiFiUdp.h>
+   //todo  UDP Port can be edited in setup page
+   int udpPort = ALPACA_DISCOVERY_PORT;
+   WiFiUDP Udp;
 #endif
 
 // name at the router ESP-1E2B43-router.home, unless we do mDNS
@@ -155,6 +162,10 @@ void setup() { // ================================================
   Serial.println("HTTP server started");
   Serial.println(WiFi.localIP());
 
+  //Starts the discovery responder server
+  Udp.begin( udpPort);
+  
+
   sei();         //Enables interrupts ( == interrupts() = set interrupt )
   
 } // end setup   ===================================================
@@ -223,14 +234,19 @@ void loop() {
     mqtt_report();
     #endif
     
-    Serial.printf("Message: %.2f \n", otC);
-    Serial.printf("Message: %.2f \n", atC);
-    Serial.printf("Message: %.3f \n", rssi);
-    Serial.printf("Message: %.2f \n", airtempC);
-    Serial.printf("Message: %.2f \n", airhum);
-    Serial.printf("Message: %.2f \n", Rainfall);
+    Serial.printf("Message: %.2f %.2f\n", otC, atC);
+    //Serial.printf("Message: %.2f \n", atC);
+    //Serial.printf("Message: %.3f \n", rssi);
+    //Serial.printf("Message: %.2f \n", airtempC);
+    //Serial.printf("Message: %.2f \n", airhum);
+    //Serial.printf("Message: %.2f \n", Rainfall);
     
     ///Rainfall = 0;  // set to zero after publishing
     tipCount = 0;
   }
+
+  int udpBytesIn = Udp.parsePacket();
+  if( udpBytesIn > 0  ) 
+     handleDiscovery( udpBytesIn );
+  
 }

@@ -1,18 +1,8 @@
 /*
-  HGAdler == AMH
-  version 4, 2020-09-12
+  HGAdler
+  version 3, 2020-09-09
   MLX90614 (IR temp sensor) and AsyncMQTT with ESP8266
   added SHT20 (temp/rHum sensor) and RG-11 (rain sensor)
-  replaced Async...MQTT library with PangolinMQTT
-
-  external libraries need to be downloaded and manually installed as zip files via Arduino IDE library manager:
-  https://github.com/me-no-dev/ESPAsyncTCP
-  https://github.com/DFRobot/DFRobot_SHT20
-  [https://github.com/marvinroger/async-mqtt-client] -> replaced by
-  https://github.com/philbowles/PangolinMQTT
-
-  all other libraries need to be installed directly via Arduino IDE library manager
-  
 */
 
 // Import required libraries
@@ -23,7 +13,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <Hash.h>
-#include <ESPAsyncTCP.h>
+#include "ESPAsyncTCP.h"
 #endif
 
 #include <Adafruit_MLX90614.h>
@@ -33,20 +23,17 @@ Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 DFRobot_SHT20    sht20;
 
 #include <Ticker.h>  // this is only available for esp8266?
-#include <PangolinMQTT.h> // P new hga
-
+#include <AsyncMqttClient.h>
 
 // WiFi credentials for local WiFi network
-#define WIFI_SSID "XXXXX"
-#define WIFI_PASSWORD "YYYYYY"
+#define WIFI_SSID "JY4W5"
+#define WIFI_PASSWORD "MilchFlasche"
 
 // Raspberri Pi Mosquitto MQTT Broker
-#define MQTT_HOST IPAddress (aaa, bbb, c, ddd) //e.g. (192, 168, 1, XXX)
+#define MQTT_HOST IPAddress (10, 0, 0, 199) //(192, 168, 1, XXX)
 // For a cloud MQTT broker, type the domain name
 //#define MQTT_HOST "example.com"
 #define MQTT_PORT 1883
-
-#define RECONNECT_DELAY_W 5  // P new hga
 
 // need to define MQTT Topics
 #define MQTT_PUB_OBJTEMP "esp/mlx90614/objTempC"
@@ -69,7 +56,7 @@ float airhum;
 
 // RG-11
 #define RG11_Pin 14  // gpio 14, was originally 2 for Arduino
-#define Bucket_Size 0.01 // in mm, set via switches in RG-11
+#define Bucket_Size 0.01 // in mm, set via switches in R-11
 
 volatile unsigned long tipCount;     // bucket tip counter that is used in interrupt routine
 volatile unsigned long ContactTime;  // Timer to manage any contact bounce in interrupt routine
@@ -78,10 +65,7 @@ long lastCount;
 float Rainfall;
 //
 
-uint32_t elapsed=0;    // P new hga
-
-//AsyncMqttClient mqttClient;
-PangolinMQTT mqttClient;     // P new hga
+AsyncMqttClient mqttClient;
 Ticker mqttReconnectTimer;
 
 WiFiEventHandler wifiConnectHandler;
@@ -89,13 +73,12 @@ WiFiEventHandler wifiDisconnectHandler;
 Ticker wifiReconnectTimer;
 
 unsigned long previousMillis = 0;   // Stores the last time when temperature was published
-const long interval = 30000;        // Interval at which to publish sensor readings in ms, change to larger values!!!!
+const long interval = 10000;        // Interval at which to publish sensor readings in ms
 
 // Interrrupt handler routine that is triggered when the RG-11 detects rain
 // ICACHE_RAM_ATTR is needed for ESP, located before any function definition
-ICACHE_RAM_ATTR 
-void rgisr ()   {
-  if ((millis() - ContactTime) > 15 ) {    //15 ) {  // debounce of sensor signal
+ICACHE_RAM_ATTR void rgisr ()   {
+  if ((millis() - ContactTime) > 15 ) {  // debounce of sensor signal
     tipCount++;
     ContactTime = millis();
   }
@@ -122,47 +105,44 @@ void connectToMqtt() {
   Serial.println("Connecting to MQTT...");
   mqttClient.connect();
 }
-//   P new hga
-std::string pload0 = "multi-line payload hex dumper which should split over several lines, with some left over";
-std::string pload1 = "PAYLOAD QOS1";
-std::string pload2 = "Save the Pangolin!";
-//   ****
 
-// P new hga
 void onMqttConnect(bool sessionPresent) {
-  elapsed=millis();
-  Serial.printf("Connected to MQTT session=%d max payload size=%d\n",sessionPresent,mqttClient.getMaxPayloadSize());
-  Serial.println("Subscribing at QoS 2");
-  mqttClient.subscribe("test", 2);
-  Serial.printf("T=%u Publishing at QoS 0\n",millis());
-  mqttClient.publish("test", 0, false, pload0);
-  Serial.printf("T=%u Publishing at QoS 1\n",millis());
-  mqttClient.publish("test", 1, false, pload1);
-  Serial.printf("T=%u Publishing at QoS 2\n",millis());
-  mqttClient.publish("test", 2, false, pload2);
+  Serial.println("Connected to MQTT.");
+  Serial.print("Session present: ");
+  Serial.println(sessionPresent);
 }
-// ****
 
-// P new hga
-void onMqttDisconnect(int8_t reason) {
-  Serial.printf("Disconnected from MQTT reason=%d\n",reason);
+void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
+  Serial.println("Disconnected from MQTT.");
 
   if (WiFi.isConnected()) {
     mqttReconnectTimer.once(2, connectToMqtt);
   }
 }
-// ********
 
-// P new hga
-void onMqttMessage(const char* topic, uint8_t* payload, struct PANGO_PROPS props, size_t len, size_t index, size_t total) {
-  Serial.printf("T=%u Message %s qos%d dup=%d retain=%d len=%d elapsed=%u\n",millis(),topic,props.qos,props.dup,props.retain,len,millis()-elapsed);
-  PANGO::dumphex(payload,len,16);
+/*void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
+  Serial.println("Subscribe acknowledged.");
+  Serial.print("  packetId: ");
+  Serial.println(packetId);
+  Serial.print("  qos: ");
+  Serial.println(qos);
+  }
+
+  void onMqttUnsubscribe(uint16_t packetId) {
+  Serial.println("Unsubscribe acknowledged.");
+  Serial.print("  packetId: ");
+  Serial.println(packetId);
+  }*/
+
+void onMqttPublish(uint16_t packetId) {
+  Serial.print("Publish acknowledged.");
+  Serial.print("  packetId: ");
+  Serial.println(packetId);
 }
-// *****
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("\nPangolinMQTT v0.0.7\n");
+  Serial.println();
 
   lastCount = 0;
   tipCount = 0;
@@ -179,23 +159,18 @@ void setup() {
     while (1);
   }
 
-  // P new hga
-#ifdef ARDUINO_ARCH_ESP8266
   wifiConnectHandler = WiFi.onStationModeGotIP(onWifiConnect);
   wifiDisconnectHandler = WiFi.onStationModeDisconnected(onWifiDisconnect);
-#else
-  WiFi.onEvent(WiFiEvent);
-#endif
-  // ***********
-  
+
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
-
-  mqttClient.onMessage(onMqttMessage);    // P new hga
+  //mqttClient.onSubscribe(onMqttSubscribe);
+  //mqttClient.onUnsubscribe(onMqttUnsubscribe);
+  mqttClient.onPublish(onMqttPublish);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
   // If your broker requires authentication (username and password), set them below
   //mqttClient.setCredentials("REPlACE_WITH_YOUR_USER", "REPLACE_WITH_YOUR_PASSWORD");
-  mqttClient.setCleanSession(true);       // P new hga
+
   connectToWifi();
 
   Serial.println("Hydreon RG-11 Rain Sensor"); 
@@ -238,29 +213,48 @@ void loop() {
     airhum = sht20.readHumidity();                  // Read AirHumidity
 
     // Publish an MQTT message on topic esp/mlx90614/objTempC
-    mqttClient.publish(MQTT_PUB_OBJTEMP, 2, false, String(otC)); // P new hga
+    uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_OBJTEMP, 1, true, String(otC).c_str());
+    Serial.printf("Publishing on topic %s at QoS 1, packetId: %i ", MQTT_PUB_OBJTEMP, packetIdPub1);
     Serial.printf("Message: %.2f \n", otC);
 
     // Publish an MQTT message on topic esp/mlx90614/ambTempC
-    mqttClient.publish(MQTT_PUB_AMBTEMP, 2, false, String(atC)); // P new hga
+    uint16_t packetIdPub2 = mqttClient.publish(MQTT_PUB_AMBTEMP, 1, true, String(atC).c_str());
+    Serial.printf("Publishing on topic %s at QoS 1, packetId: %i ", MQTT_PUB_AMBTEMP, packetIdPub2);
     Serial.printf("Message: %.2f \n", atC);
 
     // Publish an MQTT message on topic esp/mlx90614/rssi
-    mqttClient.publish(MQTT_PUB_RSSI, 2, false, String(rssi)); // P new hga
+    uint16_t packetIdPub3 = mqttClient.publish(MQTT_PUB_RSSI, 1, true, String(rssi).c_str());
+    Serial.printf("Publishing on topic %s at QoS 1, packetId: %i ", MQTT_PUB_RSSI, packetIdPub3);
     Serial.printf("Message: %.3f \n", rssi);
 
     // Publish an MQTT message on topic esp/sht20/airTempC
-    mqttClient.publish(MQTT_PUB_AIRTEMP, 2, false, String(airtempC)); // P new hga                                                                                                                                                                                                                               
+    uint16_t packetIdPub4 = mqttClient.publish(MQTT_PUB_AIRTEMP, 1, true, String(airtempC).c_str());
+    Serial.printf("Publishing on topic %s at QoS 1, packetId: %i ", MQTT_PUB_AIRTEMP, packetIdPub4);
     Serial.printf("Message: %.2f \n", airtempC);
 
     // Publish an MQTT message on topic esp/sht20/airhum
-    mqttClient.publish(MQTT_PUB_AIRHUM, 2, false, String(airhum)); // P new hga
+    uint16_t packetIdPub5 = mqttClient.publish(MQTT_PUB_AIRHUM, 1, true, String(airhum).c_str());
+    Serial.printf("Publishing on topic %s at QoS 1, packetId: %i ", MQTT_PUB_AIRHUM, packetIdPub5);
     Serial.printf("Message: %.2f \n", airhum);
 
     // Publish an MQTT message on topic esp/rg-11/Rainfall
-    mqttClient.publish(MQTT_PUB_RAIN, 2, false, String(Rainfall)); // P new hga
+    uint16_t packetIdPub6 = mqttClient.publish(MQTT_PUB_RAIN, 1, true, String(Rainfall).c_str());
+    Serial.printf("Publishing on topic %s at QoS 1, packetId: %i ", MQTT_PUB_RAIN, packetIdPub6);
     Serial.printf("Message: %.2f \n", Rainfall);
-    ///Rainfall = 0;  // set to zero after publishing
-    tipCount = 0;
+    Rainfall = 0;  // set to zero after publishing
+
+    //    Serial.print("Time:");
+    //    Serial.print(millis());
+    //    Serial.print(" Temperature:");
+    //    Serial.print(airtempC, 1);
+    //    Serial.print("C");
+    //    Serial.print(" Humidity:");
+    //    Serial.print(airhum, 1);
+    //    Serial.print("%");
+    //    Serial.print(" Rainfall:");
+    //    Serial.print(Rainfall, 1);
+    //    Serial.print("mm");   
+    //    Serial.println();
+
   }
 }

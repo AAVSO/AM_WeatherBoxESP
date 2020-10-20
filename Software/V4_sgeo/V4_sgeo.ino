@@ -43,6 +43,12 @@
 #include <WiFiManager.h>
 const String DEVICE_SSID = "AutoConnectAP";
 
+//#include "ArduinoOTA.h"  
+
+
+
+
+
 #include <Ticker.h>  // this is only available for esp8266?. Used by several
   
 #include "sensors.h" // everything related to the weather sensors
@@ -54,13 +60,6 @@ const String DEVICE_SSID = "AutoConnectAP";
 // WiFi credentials for local WiFi network
 String WIFI_SSID; 
 String WIFI_PASSWORD;
-
-
-
-//WiFiEventHandler wifiConnectHandler;
-//WiFiEventHandler wifiDisconnectHandler;
-//Ticker wifiReconnectTimer;
-
 
 void connectToWifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -76,32 +75,6 @@ void connectToWifi() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 }
-/*
-   WL_NO_SHIELD        = 255,   // for compatibility with WiFi Shield library
-    WL_IDLE_STATUS      = 0,
-    WL_NO_SSID_AVAIL    = 1,
-    WL_SCAN_COMPLETED   = 2,
-    WL_CONNECTED        = 3,
-    WL_CONNECT_FAILED   = 4,
-    WL_CONNECTION_LOST  = 5,
-    WL_DISCONNECTED     = 6 
-*/
-/*
-void onWifiConnect(const WiFiEventStationModeGotIP& event) {
-  Serial.println("Connected to Wi-Fi.");
-  #ifdef _WBOX2_MQTT_H_
-  connectToMqtt();
-  #endif
-}
-
-void onWifiDisconnect(const WiFiEventStationModeDisconnected& event) {
-  Serial.println("Disconnected from Wi-Fi.");
-  #ifdef _WBOX2_MQTT_H_
-  mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-  #endif
-  wifiReconnectTimer.once(2, connectToWifi);
-}
-*/
 
 
 
@@ -133,6 +106,8 @@ void setup() { // ================================================
   }
   
   connectToWifi();
+
+  //OTA_setup();
 
   #ifdef _WBOX2_MQTT_H_
   mqtt_setup();
@@ -248,5 +223,7 @@ void loop() {
   int udpBytesIn = Udp.parsePacket();
   if( udpBytesIn > 0  ) 
      handleDiscovery( udpBytesIn );
+
+  //ArduinoOTA.handle();     
   
 }

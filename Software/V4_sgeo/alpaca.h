@@ -27,6 +27,43 @@ const String LOCATION= "unknown";
 
 #include <ASCOMAPICommon_rest.h>  // https://github.com/gasilvis/ESP_Alpaca_common
 
+// ObservingConditions handlers
+void handleNotImplemented(void) {
+    String message;
+    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    DynamicJsonBuffer jsonBuff(256);
+    JsonObject& root = jsonBuff.createObject();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", notImplemented, "Property is not implemented" );    
+    root.printTo(message);
+#ifdef DEBUG_ESP_HTTP_SERVER
+DEBUG_OUTPUT.println( message );
+#endif
+    server.send(200, "application/json", message);
+}
+
+void handleAveragePeriod(void) {
+
+  
+}
+void handleSkytemperatureGet(void) {
+    String message;
+    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+
+    DynamicJsonBuffer jsonBuff(256);
+    JsonObject& root = jsonBuff.createObject();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Description", 0, "" );    
+    root["Value"]= Description;    
+    root.printTo(message);
+#ifdef DEBUG_ESP_HTTP_SERVER
+DEBUG_OUTPUT.println( message );
+#endif
+    server.send(200, "application/json", message);
+
+    return ;
+}
+
 
 
 
@@ -54,6 +91,27 @@ void alpaca_setup() {
    server.on(preUri+"interfaceversion",    HTTP_GET, handleInterfaceVersionGet );
    server.on(preUri+"name",                HTTP_GET, handleNameGet );
    server.on(preUri+"supportedactions",    HTTP_GET, handleSupportedActionsGet );
+
+   //ObservingConditions
+   //server.on(preUri+"averageperiod",       handleAverageperiod ); //   get/put 0.0, meaning no averaging
+   
+   server.on(preUri+"cloudcover",          handleNotImplemented );
+   server.on(preUri+"dewpoint",            handleNotImplemented );
+   server.on(preUri+"humidity",            handleNotImplemented );
+   server.on(preUri+"pressure",            handleNotImplemented );
+   // rainrate
+   server.on(preUri+"skybrightness",       handleNotImplemented );
+   server.on(preUri+"skyquality",          handleNotImplemented );
+   server.on(preUri+"skytemperature",      HTTP_GET, handleSkytemperatureGet );
+   server.on(preUri+"starfwhm",            handleNotImplemented );
+   // temperature
+   server.on(preUri+"winddirection",       handleNotImplemented );
+   server.on(preUri+"windgust",            handleNotImplemented );
+   server.on(preUri+"windspeed",           handleNotImplemented );
+   // refresh
+   // sensordescription
+   // timesincelastupdate
+   
 }
 
 void handleDiscovery( int udpBytesCount ) {

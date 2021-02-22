@@ -8,22 +8,29 @@
   Alpaca documentation:  https://github.com/ASCOMInitiative/ASCOMRemote/blob/master/Documentation/ASCOM%20Alpaca%20API%20Reference.pdf
 */
 
-
 bool connected;
-const String DeviceDescription= "the rain in spain";
-const String DriverName=         "observingconditions"; // ASCOM name
-const String DriverVersion=      DRIVER_VERSION;
+
+// for response to preUri/driverinfo
 const String DriverInfo=         "V4_sgeo";
-const String Description=        "AAVSO AM_WeatherBox2, ESP8266, NodeMCU 0.9(ESP-12 Module)" ;
+// for response to preUri/driverversion
+const String DriverVersion=      DRIVER_VERSION;
+
+// for response to /management/apiversions    and  preUri/interfaceversion 
 const String InterfaceVersion= "1";   // alpaca v1
 const String DiscoveryPacket= "alpacadiscovery1"; // ends with the interface version
-const String GUID=    "fa7b12dc-dff9-407c-a7f5-3b5e73b77c04";
-#define INSTANCE_NUMBER 0
 
-const String SERVERNAME= "abc";
-const String MFG= "AAVSO AM project";
-const String MFG_VERSION= DRIVER_VERSION;
-const String LOCATION= "unknown";
+// for response to /management/v1/configureddevices
+const String Description=        "AAVSO AM_WeatherBox2, ESP8266, NodeMCU 0.9(ESP-12 Module)" ;
+const String DriverName=         "observingconditions"; // recognised ASCOM device type    also for response to preUri/name and priUri/description
+#define INSTANCE_NUMBER 0
+const String GUID=    "fa7b12dc-dff9-407c-a7f5-3b5e73b77c04";
+
+// for response to /management/v1/description
+const String SERVERNAME= "Alpaca device";
+const String MFG= "Alan Sliski Telescope Works";
+const String MFG_VERSION= DRIVER_VERSION; // see main
+const String LOCATION= "Lincoln, MA";
+
 
 #include <ASCOMAPICommon_rest.h>  // https://github.com/gasilvis/ESP_Alpaca_common
 
@@ -34,7 +41,7 @@ void handleNotImplemented(void) {
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
     DynamicJsonBuffer jsonBuff(256);
     JsonObject& root = jsonBuff.createObject();
-    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", notImplemented, "Property is not implemented" );    
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", AE_notImplemented, "Property is not implemented" );    
     root.printTo(message);
 #ifdef DEBUG_ESP_HTTP_SERVER
 DEBUG_OUTPUT.println( message );
@@ -46,6 +53,7 @@ void handleAveragePeriod(void) {
 
   
 }
+
 void handleSkytemperatureGet(void) {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();

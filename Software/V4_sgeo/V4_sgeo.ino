@@ -16,7 +16,7 @@
   
 */
 
-#define DRIVER_VERSION  "0.4.1"
+#define DRIVER_VERSION  "0.4.2"
 
 #define ALPACA_PORT   80
 #define ALPACA_DISCOVERY_PORT  32227

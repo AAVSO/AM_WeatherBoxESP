@@ -39,10 +39,10 @@ void handleNotImplemented(void) {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
-    DynamicJsonBuffer jsonBuff(256);
-    JsonObject& root = jsonBuff.createObject();
+    StaticJsonDocument<JSON_SIZE> doc;
+    JsonObject root = doc.to<JsonObject>();
     jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", AE_notImplemented, "Property is not implemented" );    
-    root.printTo(message);
+    serializeJson(doc, message);
 #ifdef DEBUG_ESP_HTTP_SERVER
 DEBUG_OUTPUT.println( message );
 #endif
@@ -58,17 +58,15 @@ void handleSkytemperatureGet(void) {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
-
-    DynamicJsonBuffer jsonBuff(256);
-    JsonObject& root = jsonBuff.createObject();
-    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Description", 0, "" );    
+    StaticJsonDocument<JSON_SIZE> doc;
+    JsonObject root = doc.to<JsonObject>();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Description", AE_Success, "" );    
     root["Value"]= Description;    
-    root.printTo(message);
+    serializeJson(doc, message);
 #ifdef DEBUG_ESP_HTTP_SERVER
 DEBUG_OUTPUT.println( message );
 #endif
     server.send(200, "application/json", message);
-
     return ;
 }
 
@@ -136,8 +134,8 @@ void handleDiscovery( int udpBytesCount ) {
     Serial.println(protocol);
     if ( strncasecmp( DiscoveryPacket.c_str(), protocol, 16 ) == 0 )
     {
-      DynamicJsonBuffer jsonBuffer(256);
-      JsonObject& root = jsonBuffer.createObject();
+      StaticJsonDocument<JSON_SIZE> doc;
+      JsonObject root = doc.to<JsonObject>();
       Serial.println("responding");
       Udp.beginPacket( Udp.remoteIP(), Udp.remotePort() );
       //Respond with discovery message
@@ -148,7 +146,7 @@ void handleDiscovery( int udpBytesCount ) {
       root["Type"] = DriverName;
       root["Name"] = WiFi.hostname();
       root["UniqueID"] = system_get_chip_id();
-      root.printTo( message );
+      serializeJson(doc,  message);
       Udp.write( message.c_str(), strlen(message.c_str()) * sizeof(char) );
       Udp.endPacket();   
       Serial.println(message.c_str());

@@ -1,11 +1,11 @@
 // WBox2 alpaca interface
-
-
 #ifndef _WBOX2_ALPACA_H_
 #define _WBOX2_ALPACA_H_
 
 /*
-  Alpaca documentation:  https://github.com/ASCOMInitiative/ASCOMRemote/blob/master/Documentation/ASCOM%20Alpaca%20API%20Reference.pdf
+  Alpaca documentation: 
+  https://github.com/ASCOMInitiative/ASCOMRemote/blob/master/Documentation/ASCOM%20Alpaca%20API%20Reference.pdf
+  https://ascom-standards.org/api/
 */
 
 bool connected;
@@ -17,7 +17,7 @@ const String DriverVersion=      DRIVER_VERSION;
 
 // for response to /management/apiversions    and  preUri/interfaceversion 
 const String InterfaceVersion= "1";   // alpaca v1
-const String DiscoveryPacket= "alpacadiscovery1"; // ends with the interface version
+const String DiscoveryPacket= "alpacadiscovery"+ InterfaceVersion; // ends with the interface version
 
 // for response to /management/v1/configureddevices
 const String Description=        "AAVSO AM_WeatherBox2, ESP8266, NodeMCU 0.9(ESP-12 Module)" ;
@@ -31,27 +31,55 @@ const String MFG= "Alan Sliski Telescope Works";
 const String MFG_VERSION= DRIVER_VERSION; // see main
 const String LOCATION= "Lincoln, MA";
 
+// ======================================
+// list of actions supported
+#define SUPPORTED_ACTIONS_COUNT 0
+const String SupportedActions[]= ""; //{ "Action1", "Action2b" }; 
+
+#define SUPPORTED_METHODS_COUNT 1
+const String SupportedMethods[]= { "skytemperature" };
+const String MethodsDescription[] = { "MLX90614 infared"} ;
+double MethodsLastTime[SUPPORTED_METHODS_COUNT]= {0};
 
 #include <ASCOMAPICommon_rest.h>  // https://github.com/gasilvis/ESP_Alpaca_common
+#include <ASCOMAPIObservingConditions_rest.h>
 
+// ======================================
 // ObservingConditions handlers
-void handleNotImplemented(void) {
+
+double AveragePeriod = 0.25;  // in hours. 0 means no averaging
+void handleAveragePeriodGet(void) {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
     StaticJsonDocument<JSON_SIZE> doc;
     JsonObject root = doc.to<JsonObject>();
-    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", AE_notImplemented, "Property is not implemented" );    
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "AveragePeriod", AE_Success, "" );    
+    root["Value"]= AveragePeriod;    
     serializeJson(doc, message);
-#ifdef DEBUG_ESP_HTTP_SERVER
-DEBUG_OUTPUT.println( message );
-#endif
     server.send(200, "application/json", message);
+    return ;
 }
 
-void handleAveragePeriod(void) {
-
-  
+void handleAveragePeriodPut(void) {
+    String message;
+    double ap;
+    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    StaticJsonDocument<JSON_SIZE> doc;
+    JsonObject root = doc.to<JsonObject>();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "AveragePeriod", AE_Success, "" ); 
+    ap= (double)server.arg("AveragePeriod").toDouble();   
+    if(ap >= 0.0) {
+       AveragePeriod= ap;  
+       root["Value"]= AveragePeriod;    
+    } else {
+       root["Value"]= ap;
+       root["ErrorNumber"]= AE_invalidValue;
+       root["ErrorMessage"] = "Cannot be negative";      
+    }
+       serializeJson(doc, message);
+       server.send(200, "application/json", message);
 }
 
 void handleSkytemperatureGet(void) {
@@ -60,25 +88,22 @@ void handleSkytemperatureGet(void) {
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
     StaticJsonDocument<JSON_SIZE> doc;
     JsonObject root = doc.to<JsonObject>();
-    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "Description", AE_Success, "" );    
-    root["Value"]= Description;    
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "skytemperature", AE_Success, "" );    
+    root["Value"]= 25.4; // send reading here
+    MethodsLastTime[MethodsIndex("skytemperature")]= millis();
     serializeJson(doc, message);
-#ifdef DEBUG_ESP_HTTP_SERVER
-DEBUG_OUTPUT.println( message );
-#endif
     server.send(200, "application/json", message);
-    return ;
 }
 
 
 
-
+// ======================================
 void alpaca_setup() {
    
    // management api
    server.on("/management/apiversions", handleAPIversions);
-   server.on("/management/v1/configureddevices", handleAPIconfiguredDevices);
-   server.on("/management/v1/description", handleAPIdescription);
+   server.on("/management/v"+InterfaceVersion+"/configureddevices", handleAPIconfiguredDevices);
+   server.on("/management/v"+InterfaceVersion+"/description", handleAPIdescription);
    
    //Common ASCOM handlers
    String preUri = "/api/v"+ InterfaceVersion+ "/";
@@ -86,6 +111,7 @@ void alpaca_setup() {
    preUri += "/";
    preUri += INSTANCE_NUMBER;
    preUri += "/";
+   server.on(preUri+"supportedactions",    HTTP_GET, handleSupportedActionsGet );
    server.on(preUri+"action",              HTTP_PUT, handleAction );
    server.on(preUri+"commandblind",        HTTP_PUT, handleCommandBlind );
    server.on(preUri+"commandbool",         HTTP_PUT, handleCommandBool );
@@ -96,30 +122,32 @@ void alpaca_setup() {
    server.on(preUri+"driverversion",       HTTP_GET, handleDriverVersionGet );
    server.on(preUri+"interfaceversion",    HTTP_GET, handleInterfaceVersionGet );
    server.on(preUri+"name",                HTTP_GET, handleNameGet );
-   server.on(preUri+"supportedactions",    HTTP_GET, handleSupportedActionsGet );
 
    //ObservingConditions
-   //server.on(preUri+"averageperiod",       handleAverageperiod ); //   get/put 0.0, meaning no averaging
-   
+   server.on(preUri+"averageperiod",       HTTP_GET, handleAveragePeriodGet ); 
+   server.on(preUri+"averageperiod",       HTTP_PUT, handleAveragePeriodPut ); 
    server.on(preUri+"cloudcover",          handleNotImplemented );
    server.on(preUri+"dewpoint",            handleNotImplemented );
    server.on(preUri+"humidity",            handleNotImplemented );
    server.on(preUri+"pressure",            handleNotImplemented );
-   // rainrate
+   server.on(preUri+"rainrate",            handleNotImplemented );  // rainrate
    server.on(preUri+"skybrightness",       handleNotImplemented );
    server.on(preUri+"skyquality",          handleNotImplemented );
    server.on(preUri+"skytemperature",      HTTP_GET, handleSkytemperatureGet );
    server.on(preUri+"starfwhm",            handleNotImplemented );
-   // temperature
+   server.on(preUri+"temperature",         handleNotImplemented );  // temperature
    server.on(preUri+"winddirection",       handleNotImplemented );
    server.on(preUri+"windgust",            handleNotImplemented );
    server.on(preUri+"windspeed",           handleNotImplemented );
-   // refresh
-   // sensordescription
-   // timesincelastupdate
+   
+   server.on(preUri+"refresh",             HTTP_PUT, handleRefresh);
+   server.on(preUri+"sensordescription",   HTTP_GET, handleSensorDescription);
+   server.on(preUri+"timesincelastupdate", HTTP_GET, handleTimeSinceLastUpdate);
    
 }
 
+
+// ======================================
 void handleDiscovery( int udpBytesCount ) {
     char inBytes[64];
     String message;
@@ -153,8 +181,5 @@ void handleDiscovery( int udpBytesCount ) {
     }
  }
  
-
-
-
 
 #endif

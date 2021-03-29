@@ -27,27 +27,30 @@ const String GUID=    "fa7b12dc-dff9-407c-a7f5-3b5e73b77c04";
 
 // for response to /management/v1/description
 const String SERVERNAME= "Alpaca device";
-const String MFG= "Alan Sliski Telescope Works";
+const String MFG= "Alan Sliski Telescope Works and Silvis";
 const String MFG_VERSION= DRIVER_VERSION; // see main
-const String LOCATION= "Lincoln, MA";
+const String LOCATION= "Bourne, MA";
 
 // ======================================
+// things needed by the ASCOM API Common headers
 // list of actions supported
 #define SUPPORTED_ACTIONS_COUNT 0
-const String SupportedActions[]= ""; //{ "Action1", "Action2b" }; 
+const char* SupportedActions[]= {}; //""; // or { "Action1", "Action2b" }; 
 
-#define SUPPORTED_METHODS_COUNT 1
-const String SupportedMethods[]= { "skytemperature" };
-const String MethodsDescription[] = { "MLX90614 infared"} ;
+#define SUPPORTED_METHODS_COUNT 4
+const char* SupportedMethods[]= { "Temperature", "SkyTemperature" , "Humidity", "DewPoint"};
+const char* MethodsDescription[] = { "MLX90614 infared", "SHT20", "SHT20", "computed"} ;
 double MethodsLastTime[SUPPORTED_METHODS_COUNT]= {0};
 
 #include <ASCOMAPICommon_rest.h>  // https://github.com/gasilvis/ESP_Alpaca_common
 #include <ASCOMAPIObservingConditions_rest.h>
 
+//__FlashStringHelper* fshClientID[]= "ClientID";
+
 // ======================================
 // ObservingConditions handlers
 
-double AveragePeriod = 0.25;  // in hours. 0 means no averaging
+float AveragePeriod = 0.25;  // in hours. 0 means no averaging
 void handleAveragePeriodGet(void) {
     String message;
     uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
@@ -68,7 +71,7 @@ void handleAveragePeriodPut(void) {
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
     StaticJsonDocument<JSON_SIZE> doc;
     JsonObject root = doc.to<JsonObject>();
-    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "AveragePeriod", AE_Success, "" ); 
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", AE_Success, "" ); 
     ap= (double)server.arg("AveragePeriod").toDouble();   
     if(ap >= 0.0) {
        AveragePeriod= ap;  
@@ -88,13 +91,49 @@ void handleSkytemperatureGet(void) {
     uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
     StaticJsonDocument<JSON_SIZE> doc;
     JsonObject root = doc.to<JsonObject>();
-    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "skytemperature", AE_Success, "" );    
-    root["Value"]= 25.4; // send reading here
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", AE_Success, "" );    
+    root["Value"]= skytempC; // send reading here
     MethodsLastTime[MethodsIndex("skytemperature")]= millis();
     serializeJson(doc, message);
     server.send(200, "application/json", message);
 }
 
+void handleTemperatureGet(void) {
+    String message;
+    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    StaticJsonDocument<JSON_SIZE> doc;
+    JsonObject root = doc.to<JsonObject>();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", AE_Success, "" );    
+    root["Value"]= airtempC; // send reading here
+    MethodsLastTime[MethodsIndex("temperature")]= millis();
+    serializeJson(doc, message);
+    server.send(200, "application/json", message);
+}
+void handleHumidityGet(void) {
+    String message;
+    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    StaticJsonDocument<JSON_SIZE> doc;
+    JsonObject root = doc.to<JsonObject>();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", AE_Success, "" );    
+    root["Value"]= airhum; // send reading here
+    MethodsLastTime[MethodsIndex("humidity")]= millis();
+    serializeJson(doc, message);
+    server.send(200, "application/json", message);
+}
+void handleDewpointGet(void) {
+    String message;
+    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    StaticJsonDocument<JSON_SIZE> doc;
+    JsonObject root = doc.to<JsonObject>();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", AE_Success, "" );    
+    root["Value"]= dewpoint; // send reading here
+    MethodsLastTime[MethodsIndex("dewpoint")]= millis();
+    serializeJson(doc, message);
+    server.send(200, "application/json", message);
+}
 
 
 // ======================================
@@ -127,15 +166,15 @@ void alpaca_setup() {
    server.on(preUri+"averageperiod",       HTTP_GET, handleAveragePeriodGet ); 
    server.on(preUri+"averageperiod",       HTTP_PUT, handleAveragePeriodPut ); 
    server.on(preUri+"cloudcover",          handleNotImplemented );
-   server.on(preUri+"dewpoint",            handleNotImplemented );
-   server.on(preUri+"humidity",            handleNotImplemented );
+   server.on(preUri+"dewpoint",            HTTP_GET, handleDewpointGet );
+   server.on(preUri+"humidity",            HTTP_GET, handleHumidityGet );
    server.on(preUri+"pressure",            handleNotImplemented );
    server.on(preUri+"rainrate",            handleNotImplemented );  // rainrate
    server.on(preUri+"skybrightness",       handleNotImplemented );
    server.on(preUri+"skyquality",          handleNotImplemented );
    server.on(preUri+"skytemperature",      HTTP_GET, handleSkytemperatureGet );
    server.on(preUri+"starfwhm",            handleNotImplemented );
-   server.on(preUri+"temperature",         handleNotImplemented );  // temperature
+   server.on(preUri+"temperature",         HTTP_GET, handleTemperatureGet );  // 
    server.on(preUri+"winddirection",       handleNotImplemented );
    server.on(preUri+"windgust",            handleNotImplemented );
    server.on(preUri+"windspeed",           handleNotImplemented );

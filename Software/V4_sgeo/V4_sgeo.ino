@@ -113,8 +113,6 @@ void setup() { // ================================================
   mqtt_setup();
   #endif
 
-  sensors_setup();
-
 /*
 #ifdef ARDUINO_ARCH_ESP8266
   wifiConnectHandler = WiFi.onStationModeGotIP(onWifiConnect);
@@ -130,7 +128,9 @@ void setup() { // ================================================
 
   server.on("/setup", handleSetup);
 
+  sensors_setup();
   alpaca_setup();
+
   
   // server
   server.begin(); 
@@ -180,12 +180,12 @@ void handleSetup() {
   server.send(200, "text/plain", "Setup page for setting Alpaca discovery port and MQTT interface");
 }
 
-unsigned long previousMillis = 0;   // Stores the last time when temperature was published
-const long interval = 30000;        // Interval at which to publish sensor readings in ms, change to larger values!!!!
+
 void loop() {
   server.handleClient();
   
   // we only display the tip count when it has been incremented by the sensor
+  /*
   cli();         //Disable interrupts
   if (tipCount != lastCount) {
     lastCount = tipCount;
@@ -194,14 +194,10 @@ void loop() {
     Serial.print("\t Rainfall: "); Serial.println(Rainfall);
   }
   sei();         //Enables interrupts
+*/
 
-
-  unsigned long currentMillis = millis();
   // Every X number of seconds (interval = 10 seconds)
   // it publishes a new MQTT message
-  if (currentMillis - previousMillis >= interval) {
-    // Save the last time a new reading was published
-    previousMillis = currentMillis;
 
     sensor_update();
 
@@ -209,16 +205,9 @@ void loop() {
     mqtt_report();
     #endif
     
-    Serial.printf("Message: %.2f %.2f\n", otC, atC);
-    //Serial.printf("Message: %.2f \n", atC);
-    //Serial.printf("Message: %.3f \n", rssi);
-    //Serial.printf("Message: %.2f \n", airtempC);
-    //Serial.printf("Message: %.2f \n", airhum);
-    //Serial.printf("Message: %.2f \n", Rainfall);
-    
     ///Rainfall = 0;  // set to zero after publishing
-    tipCount = 0;
-  }
+    //tipCount = 0;
+  
 
   int udpBytesIn = Udp.parsePacket();
   if( udpBytesIn > 0  ) 

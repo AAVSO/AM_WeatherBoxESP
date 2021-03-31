@@ -30,7 +30,7 @@ void rgisr ()   {
 
 // data averaging management 
 // The average age of the data in the simple-exponential-smoothing forecast is 1/α relative to the period for which the forecast is computed.
-float sampleRate= 0.02; // hrs  
+float sampleRate= 0.01; // hrs  
 
 unsigned long currentMillis = 0;
 unsigned long previousMillis = 0;   // Stores the last time when temperature was published
@@ -45,6 +45,7 @@ float skytempC;
 float airtempC;
 float airhum;
 float dewpoint;
+bool  RainSense= true; // ie, no rain
 
 void sensors_setup() {
 
@@ -66,7 +67,10 @@ void sensors_setup() {
    dewpoint = airtempC -((100.0-airhum)/5.0); 
 
 
-   //Serial.println("Hydreon RG-11 Rain Sensor"); 
+   Serial.println("Hydreon RG-11 Rain Sensor"); 
+   #define RG11_pin 13
+   pinMode(RG11_pin, INPUT_PULLUP);
+   
    //Serial.print("Bucket Size: "); Serial.print(Bucket_Size); Serial.println(" mm");
 
    //pinMode(RG11_Pin, INPUT);   // set the digital input pin to input for the RG-11 Sensor
@@ -93,11 +97,13 @@ void sensor_update() {
       airtempC = smooth(airtempC, sht20.readTemperature());   // Read AirTemperature
       airhum = smooth(airhum, sht20.readHumidity());       // Read AirHumidity
       dewpoint = airtempC -((100.0-airhum)/5.0); 
+      RainSense= 1 == digitalRead(RG11_pin);
    
       Serial.printf("skytemp  %.1f ", skytempC); //, atC);
       Serial.printf("airtemp  %.1f ", airtempC);
-      Serial.printf("humidity %.1f ", airhum);
-      Serial.printf("dewpoint %.1f \n", dewpoint);
+      Serial.printf("humidity %.1f ",  airhum);
+      Serial.printf("dewpoint %.1f ", dewpoint);
+      Serial.printf("rain %s\n", RainSense?"no": "yes");  
       
       previousMillis+= interval;
     }   

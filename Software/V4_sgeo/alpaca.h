@@ -37,9 +37,9 @@ const String LOCATION= "Bourne, MA";
 #define SUPPORTED_ACTIONS_COUNT 0
 const char* SupportedActions[]= {}; //""; // or { "Action1", "Action2b" }; 
 
-#define SUPPORTED_METHODS_COUNT 4
-const char* SupportedMethods[]= { "Temperature", "SkyTemperature" , "Humidity", "DewPoint"};
-const char* MethodsDescription[] = { "MLX90614 infared", "SHT20", "SHT20", "computed"} ;
+#define SUPPORTED_METHODS_COUNT 5
+const char* SupportedMethods[]= { "SkyTemperature", "Temperature" , "Humidity", "DewPoint", "RainRate"};
+const char* MethodsDescription[] = { "MLX90614 infared", "SHT20", "SHT20", "computed", "RG-11, binary"} ;
 double MethodsLastTime[SUPPORTED_METHODS_COUNT]= {0};
 
 #include <ASCOMAPICommon_rest.h>  // https://github.com/gasilvis/ESP_Alpaca_common
@@ -134,7 +134,24 @@ void handleDewpointGet(void) {
     serializeJson(doc, message);
     server.send(200, "application/json", message);
 }
-
+void handleRainrateGet(void) {
+    String message;
+    uint32_t clientID = (uint32_t)server.arg("ClientID").toInt();
+    uint32_t clientTransID = (uint32_t)server.arg("ClientTransactionID").toInt();
+    StaticJsonDocument<JSON_SIZE> doc;
+    JsonObject root = doc.to<JsonObject>();
+    jsonResponseBuilder( root, clientID, clientTransID, ++serverTransID, "", AE_Success, "" );    
+    root["Value"]= RainSense? 0.0: 9.9; // if sensed, class as heavy rain
+    MethodsLastTime[MethodsIndex("rainrate")]= millis();
+    serializeJson(doc, message);
+    server.send(200, "application/json", message);
+}
+/*
+    Light rain — when the precipitation rate is < 2.5 mm (0.098 in) per hour
+    Moderate rain — when the precipitation rate is between 2.5 mm (0.098 ) - 7.6 mm (0.30 in) or 10 mm (0.39 in) per hour
+    Heavy rain — when the precipitation rate is > 7.6 mm (0.30 in) per hour, or between 10 mm (0.39 in) and 50 mm (2.0 in) per hour
+    Violent rain — when the precipitation rate is > 50 mm (2.0 in) per hour    
+ */
 
 // ======================================
 void alpaca_setup() {
@@ -169,7 +186,7 @@ void alpaca_setup() {
    server.on(preUri+"dewpoint",            HTTP_GET, handleDewpointGet );
    server.on(preUri+"humidity",            HTTP_GET, handleHumidityGet );
    server.on(preUri+"pressure",            handleNotImplemented );
-   server.on(preUri+"rainrate",            handleNotImplemented );  // rainrate
+   server.on(preUri+"rainrate",            HTTP_GET, handleRainrateGet );  // rainrate
    server.on(preUri+"skybrightness",       handleNotImplemented );
    server.on(preUri+"skyquality",          handleNotImplemented );
    server.on(preUri+"skytemperature",      HTTP_GET, handleSkytemperatureGet );

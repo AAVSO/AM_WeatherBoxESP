@@ -16,7 +16,7 @@
   
 */
 
-#define DRIVER_VERSION  "0.4.2"
+#define DRIVER_VERSION  "0.5.1"
 
 #define ALPACA_PORT   80
 #define ALPACA_DISCOVERY_PORT  32227
@@ -32,6 +32,7 @@
    //#include <ESPAsyncTCP.h>
    #include <ESP8266WebServer.h>  //https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
    ESP8266WebServer server(ALPACA_PORT);
+   //#include <ESP8266mDNS.h>
    #include <WiFiUdp.h>
    //todo  UDP Port can be edited in setup page
    int udpPort = ALPACA_DISCOVERY_PORT;
@@ -43,7 +44,7 @@
 #include <WiFiManager.h>
 const String DEVICE_SSID = "AutoConnectAP";
 
-//#include "ArduinoOTA.h"  
+#include "ArduinoOTA.h"  
 
 
 
@@ -52,7 +53,6 @@ const String DEVICE_SSID = "AutoConnectAP";
 #include <Ticker.h>  // this is only available for esp8266?. Used by several
   
 #include "sensors.h" // everything related to the weather sensors
-//#include "mqtt.h"   // everything related to MQTT
 #include "alpaca.h"  
 
 
@@ -107,11 +107,8 @@ void setup() { // ================================================
   
   connectToWifi();
 
-  //OTA_setup();
+  ArduinoOTA.begin();     
 
-  #ifdef _WBOX2_MQTT_H_
-  mqtt_setup();
-  #endif
 
 /*
 #ifdef ARDUINO_ARCH_ESP8266
@@ -180,7 +177,7 @@ void handleSetup() {
   server.send(200, "text/plain", "Setup page for setting Alpaca discovery port and MQTT interface");
 }
 
-
+int udpBytesIn;
 void loop() {
   server.handleClient();
   
@@ -196,20 +193,12 @@ void loop() {
   sei();         //Enables interrupts
 */
 
-  // Every X number of seconds (interval = 10 seconds)
-  // it publishes a new MQTT message
-
+  // Every X number of seconds (interval set in sensors.h)
     sensor_update();
 
-    #ifdef _WBOX2_MQTT_H_
-    mqtt_report();
-    #endif
-    
-    ///Rainfall = 0;  // set to zero after publishing
-    //tipCount = 0;
   
 
-  int udpBytesIn = Udp.parsePacket();
+  udpBytesIn = Udp.parsePacket();
   if( udpBytesIn > 0  ) 
      handleDiscovery( udpBytesIn );
 

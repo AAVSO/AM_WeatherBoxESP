@@ -27,7 +27,7 @@ const String GUID=    "fa7b12dc-dff9-407c-a7f5-3b5e73b77c04";
 
 // for response to /management/v1/description
 const String SERVERNAME= "Alpaca device";
-const String MFG= "Alan Sliski Telescope Works and Silvis";
+const String MFG= "Alan Sliski Telescope Works and George Silvis";
 const String MFG_VERSION= DRIVER_VERSION; // see main
 const String LOCATION= "Bourne, MA";
 

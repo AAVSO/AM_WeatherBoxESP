@@ -8,8 +8,11 @@
 #include <Adafruit_MLX90614.h>
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 
-#include "DFRobot_SHT20.h"
-DFRobot_SHT20    sht20;
+//#include "DFRobot_SHT30.h"
+//DFRobot_SHT20    sht20;
+#include <Wire.h>
+#include "Adafruit_SHT31.h"
+Adafruit_SHT31 sht30 = Adafruit_SHT31();   //  Create sht30, an Adafruit_SHT31 object
 
 // RG-11
 #define RG11_Pin 14  // gpio 14, was originally 2 for Arduino
@@ -58,12 +61,19 @@ void sensors_setup() {
    }
    skytempC = mlx.readObjectTempC();
 
+   /*
    // Initialize SHT20 sensor
    sht20.initSHT20();                                  // Init SHT20 Sensor
    delay(100);
    sht20.checkSHT20();                                 // Check SHT20 Sensor
    airtempC = sht20.readTemperature();   // Read AirTemperature
    airhum = sht20.readHumidity();       // Read AirHumidity
+   */
+   sht30.begin(0x44);
+   delay(100);
+   airtempC = sht30.readTemperature();
+   airhum = sht30.readHumidity();
+   
    dewpoint = airtempC -((100.0-airhum)/5.0); 
 
 
@@ -94,8 +104,8 @@ void sensor_update() {
       skytempC = smooth(skytempC, mlx.readObjectTempC());
   
       // New SHT20 sensor readings
-      airtempC = smooth(airtempC, sht20.readTemperature());   // Read AirTemperature
-      airhum = smooth(airhum, sht20.readHumidity());       // Read AirHumidity
+      airtempC = smooth(airtempC, sht30.readTemperature());   // Read AirTemperature
+      airhum = smooth(airhum, sht30.readHumidity());       // Read AirHumidity
       dewpoint = airtempC -((100.0-airhum)/5.0); 
       RainSense= 1 == digitalRead(RG11_pin);
    

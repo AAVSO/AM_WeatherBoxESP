@@ -16,7 +16,7 @@
   
 */
 
-#define DRIVER_VERSION  "0.5.1"
+#define DRIVER_VERSION  "0.6.0"
 
 #define ALPACA_PORT   80
 #define ALPACA_DISCOVERY_PORT  32227
@@ -39,22 +39,18 @@
    WiFiUDP Udp;
 #endif
 
-// name at the router ESP-1E2B43-router.home, unless we do mDNS
+// name at the router ESP-1E2B43 (last 3 fields of mac address)
+
 
 #include <WiFiManager.h>
 const String DEVICE_SSID = "AutoConnectAP";
 
 #include "ArduinoOTA.h"  
 
-
-
-
-
 #include <Ticker.h>  // this is only available for esp8266?. Used by several
   
 #include "sensors.h" // everything related to the weather sensors
 #include "alpaca.h"  
-
 
 
 // WiFi credentials for local WiFi network
@@ -63,19 +59,20 @@ String WIFI_PASSWORD;
 
 void connectToWifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to Wi-Fi");
+  Serial.print("Connecting to Wi-Fi :");
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(WiFi.status()); //".");
+    Serial.print(WiFi.status()); //".");  6 means working on it. 3 means done ?
   }
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(WIFI_SSID);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  Serial.print("mac address: ");
+  Serial.println(WiFi.macAddress());
 }
-
 
 
 // put your setup code here, to run once:
@@ -109,16 +106,6 @@ void setup() { // ================================================
 
   ArduinoOTA.begin();     
 
-
-/*
-#ifdef ARDUINO_ARCH_ESP8266
-  wifiConnectHandler = WiFi.onStationModeGotIP(onWifiConnect);
-  wifiDisconnectHandler = WiFi.onStationModeDisconnected(onWifiDisconnect);
-#else
-  WiFi.onEvent(WiFiEvent);
-#endif
-*/  
-
   server.on("/", handleRoot);
   server.onNotFound(handleNotFound);
   server.on("/reset", handleReset);
@@ -126,6 +113,10 @@ void setup() { // ================================================
   server.on("/setup", handleSetup);
 
   sensors_setup();
+  //x related to I2C scan, trying to find I2C devices
+  //x  Wire.begin();
+  //x  Serial.println("\nI2C Scanner");
+  
   alpaca_setup();
 
   
@@ -181,20 +172,52 @@ int udpBytesIn;
 void loop() {
   server.handleClient();
   
-  // we only display the tip count when it has been incremented by the sensor
-  /*
-  cli();         //Disable interrupts
-  if (tipCount != lastCount) {
-    lastCount = tipCount;
-    Rainfall = tipCount * Bucket_Size;
-    Serial.print("Tip Count: "); Serial.print(tipCount);
-    Serial.print("\t Rainfall: "); Serial.println(Rainfall);
+  // Every X number of seconds (interval set in sensors.h)
+  sensor_update();
+  
+/* for checking I2C connections
+//xxxxxxxxxxxxxxxx
+  byte error, address;
+  int nDevices;
+ 
+  Serial.println("Scanning...");
+ 
+  nDevices = 0;
+  for(address = 1; address < 127; address++ )
+  {
+    // The i2c_scanner uses the return value of
+    // the Write.endTransmisstion to see if
+    // a device did acknowledge to the address.
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+ 
+    if (error == 0)
+    {
+      Serial.print("I2C device found at address 0x");
+      if (address<16)
+        Serial.print("0");
+      Serial.print(address,HEX);
+      Serial.println("  !");
+ 
+      nDevices++;
+    }
+    else if (error==4)
+    {
+      Serial.print("Unknown error at address 0x");
+      if (address<16)
+        Serial.print("0");
+      Serial.println(address,HEX);
+    }    
   }
-  sei();         //Enables interrupts
+  if (nDevices == 0)
+    Serial.println("No I2C devices found\n");
+  else
+    Serial.println("done\n");
+ 
+  delay(5000);           // wait 5 seconds for next scan
+//xxxxxxxxxxxxxxxxxxxx
 */
 
-  // Every X number of seconds (interval set in sensors.h)
-    sensor_update();
 
   
 

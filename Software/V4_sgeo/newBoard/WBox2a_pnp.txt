@@ -1,0 +1,31 @@
+*Pick And Place List
+*Company=
+*Author=
+*eMail=
+*
+*Project=WBox2a
+*Date=22:21:00
+*CreatedBy=Fritzing 0.9.10b.2022-07-01.CD-2134-0-40d23c29
+*
+*
+*Coordinates in mm, always center of component
+*Origin 0/0=Lower left corner of PCB
+*Rotation in degree (0-360, math. pos.)
+*
+*No;Value;Package;X;Y;Rotation;Side;Name
+1;;;28.564;-28.749;0;Bottom;TXT8
+2;;;27.0676;-24.2792;0;Bottom;M1
+3;;;85.732;-3.04258;0;Bottom;TXT5
+4;;;55.7071;-9.12827;0;Bottom;TXT6
+5;;;37.2515;-10.1933;0;Bottom;TXT3
+6;;;8.41283;-9.94032;0;Bottom;TXT1
+7;;;57.2943;-2.89044;0;Bottom;TXT5
+8;;THT;58.4244;-6.44839;90;Bottom;J-skysensor
+9;;;80.6106;-22.96;-90;Bottom;Mod1
+10;;;9.702;-3.04259;0;Bottom;TXT2
+11;;;23.2971;-24.9352;0;Bottom;TXT9
+12;;THT;34.2944;-6.70239;90;Bottom;J-RG11
+13;;THT;8.25937;-5.94039;90;Bottom;J-pwr
+14;;THT;85.0944;-6.70239;90;Bottom;J-humidity
+15;;;90.6999;-8.97613;0;Bottom;TXT7
+16;;;35.142;-2.80142;0;Bottom;TXT4

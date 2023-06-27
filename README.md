@@ -1,6 +1,5 @@
 # AM_WeatherBox2
 A weather watcher that can serve as an observatories safety monitor
-Summary:
 - based on ESP8266 with wifi connection
 - 3 sensors: sky temp, temperature/humidity, rain detector
 - ASCOM Alpaca device so it can be included in an ASCOM Observing Conditions Hub

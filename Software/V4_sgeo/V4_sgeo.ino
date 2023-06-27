@@ -134,9 +134,15 @@ void setup() { // ================================================
 } // end setup   ===================================================
 
 void handleRoot() {
-  const char* ss= "Use /reset to reset the wifi credentials.";
-  Serial.println(ss);
-  server.send(200, "text/plain", ss);
+  String msg=  "Use /reset to reset the wifi credentials.\n";
+  char buf[40]; 
+  sprintf(buf, "skytemp  %.1f, ", skytempC); msg+= buf;
+  sprintf(buf, "airtemp  %.1f, ", airtempC); msg+= buf;
+  sprintf(buf, "humidity %.1f, ",  airhum); msg+= buf;
+  sprintf(buf, "dewpoint %.1f, ", dewpoint); msg+= buf;
+  sprintf(buf, "rain %s\n", RainSense?"no": "yes"); msg+= buf;
+  server.send(200, "text/plain", msg); 
+  Serial.println(msg);
 }
 
 void handleNotFound() {
@@ -166,6 +172,7 @@ void handleReset() {
 
 void handleSetup() {
   server.send(200, "text/plain", "Setup page for setting Alpaca discovery port and MQTT interface");
+  
 }
 
 int udpBytesIn;

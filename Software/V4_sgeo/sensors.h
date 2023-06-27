@@ -73,9 +73,8 @@ void sensors_setup() {
    delay(100);
    airtempC = sht30.readTemperature();
    airhum = sht30.readHumidity();
-   
    dewpoint = airtempC -((100.0-airhum)/5.0); 
-
+   Serial.println("Get readings by calling root url");
 
    Serial.println("Hydreon RG-11 Rain Sensor"); 
    #define RG11_pin 13
@@ -108,13 +107,13 @@ void sensor_update() {
       airhum = smooth(airhum, sht30.readHumidity());       // Read AirHumidity
       dewpoint = airtempC -((100.0-airhum)/5.0); 
       RainSense= 1 == digitalRead(RG11_pin);
-   
+      /* get data by calling the root url  
       Serial.printf("skytemp  %.1f ", skytempC); //, atC);
       Serial.printf("airtemp  %.1f ", airtempC);
       Serial.printf("humidity %.1f ",  airhum);
       Serial.printf("dewpoint %.1f ", dewpoint);
       Serial.printf("rain %s\n", RainSense?"no": "yes");  
-      
+      */
       previousMillis+= interval;
     }   
 }
